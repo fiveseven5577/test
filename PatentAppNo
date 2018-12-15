@@ -1,0 +1,50 @@
+
+
+Sub PatentAppNoModified(applicationNumber)
+
+    applicationNumber = Replace(Replace(applicationNumber, " ", ""), ".", "")
+        
+End Sub
+
+Function PatentAppNoCheckBit(applicationNumber)
+
+    Dim LengthOfAppNumber, TypeOfAppNumber As Byte
+    Dim ArrAppNo()
+    Dim sum, i As Integer
+    
+    i = 1
+    sum = 0
+    
+    CheckBitSequence = Array(2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5)
+    
+        TypeOfAppNumber = VarType(applicationNumber)
+        LengthOfAppNumber = Len(applicationNumber) - 1 '形参aaplicationNumber是13位的专利号，最后一位是检验位，只需要取前12位
+            
+        ReDim ArrAppNo(1 To LengthOfAppNumber)
+            
+            For i = 1 To LengthOfAppNumber Step 1
+            
+                ArrAppNo(i) = CInt(Mid(applicationNumber, i, 1))
+                sum = sum + ArrAppNo(i) * CheckBitSequence(i - 1)   'CheckBitSequence下标从0开始，i从1开始，故（i-1)
+                
+            Next i
+            
+        PatentAppNoCheckBit = sum Mod 11
+        
+        If (PatentAppNoCheckBit >= 10) Then
+        
+            PatentAppNoCheckBit = "X"
+        
+        End If
+        
+End Function
+
+Sub test_main()
+
+x = "201730447780.9"
+
+Call PatentAppNoModified(x)
+
+    MsgBox PatentAppNoCheckBit(x)
+
+End Sub
