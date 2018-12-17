@@ -1,0 +1,77 @@
+
+Sub PatentAppNoModified(applicationNumber)
+
+'delete ""  "/" in applicationNumber
+'check checkbit in applicationNumber
+
+    applicationNumber = Replace(Replace(applicationNumber, " ", ""), ".", "")
+        
+End Sub
+
+Function PatentAppNoCheckBit(applicationNumber)   '×¨ÀûÉêÇëºÅÐ£ÑéÎ»
+
+    Dim LengthOfAppNumber, TypeOfAppNumber As Byte
+    Dim ArrAppNo()
+    Dim sum, i As Integer
+    
+    i = 1
+    sum = 0
+    
+    CheckBitSequence = Array(2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5)
+    
+        TypeOfAppNumber = VarType(applicationNumber)
+        LengthOfAppNumber = Len(applicationNumber) - 1 'ÐÎ²ÎaaplicationNumberÊÇ13Î»µÄ×¨ÀûºÅ£¬×îºóÒ»Î»ÊÇ¼ìÑéÎ»£¬Ö»ÐèÒªÈ¡Ç°12Î»
+            
+        ReDim ArrAppNo(1 To LengthOfAppNumber)
+            
+            For i = 1 To LengthOfAppNumber Step 1
+            
+                ArrAppNo(i) = CInt(Mid(applicationNumber, i, 1))
+                sum = sum + ArrAppNo(i) * CheckBitSequence(i - 1)   'CheckBitSequenceÏÂ±ê´Ó0¿ªÊ¼£¬forÑ­»·µÄi´Ó1¿ªÊ¼£¬¹Ê£¨i-1)
+                
+            Next i
+            
+        PatentAppNoCheckBit = sum Mod 11
+        
+        If (PatentAppNoCheckBit >= 10) Then
+        
+            PatentAppNoCheckBit = "X"
+        
+        End If
+        
+End Function
+
+Function IDentityCheckbit(IDentityNumbers)          'ÖÐ¹ú¹«ÃñÉí·ÝÖ¤ºÅÐ£ÑéÎ»,18Î»
+
+    Dim LengthOfIDentityNumbers, TypeOfIDentityNumbers, remainder, i As Byte
+    i = 1
+    Dim ArrIDentityNumbers()
+    Dim sum  As Integer
+    sum = 0
+    
+    IDCardCheckBitSequence = Array(7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2)
+    IDCardCheckBitResult = Array(1, 0, x, 9, 8, 7, 6, 5, 4, 3, 2)
+    
+        TypeOfIDentityNumbers = VarType(IDentityNumbers)
+        LengthOfIDentityNumbers = Len(IDentityNumbers) - 1 'ÐÎ²ÎIDentityNoÊÇ18Î»µÄÉí·ÝÖ¤ºÅ£¬×îºóÒ»Î»ÊÇ¼ìÑéÎ»£¬Ö»ÐèÒªÈ¡Ç°17Î»
+            
+        ReDim ArrIDentityNumbers(1 To LengthOfIDentityNumbers)
+            
+            For i = 1 To LengthOfIDentityNumbers Step 1
+            
+                ArrIDentityNumbers(i) = CInt(Mid(IDentityNumbers, i, 1))
+                sum = sum + ArrIDentityNumbers(i) * IDCardCheckBitSequence(i - 1)   'IDCardCheckBitSequenceÏÂ±ê´Ó0¿ªÊ¼£¬forÑ­»·µÄi´Ó1¿ªÊ¼£¬¹Ê£¨i-1)
+                
+            Next i
+            
+        remainder = sum Mod 11
+        
+        IDentityCheckbit = IDCardCheckBitResult(remainder)
+        
+        If remainder = 2 Then
+        
+            IDentityCheckbit = "X"
+        
+        End If
+ 
+End Function
