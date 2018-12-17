@@ -2,13 +2,12 @@
 Sub PatentAppNoModified(applicationNumber)
 
 'delete ""  "/" in applicationNumber
-'check checkbit in applicationNumber
 
     applicationNumber = Replace(Replace(applicationNumber, " ", ""), ".", "")
         
 End Sub
 
-Function PatentAppNoCheckBit(applicationNumber)   '×¨ÀûÉêÇëºÅÐ£ÑéÎ»
+Function PatentAppNoCheckBit(applicationNumber)   '专利申请号校验位
 
     Dim LengthOfAppNumber, TypeOfAppNumber As Byte
     Dim ArrAppNo()
@@ -20,14 +19,14 @@ Function PatentAppNoCheckBit(applicationNumber)   '×¨ÀûÉêÇëºÅÐ£Ñé�
     CheckBitSequence = Array(2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5)
     
         TypeOfAppNumber = VarType(applicationNumber)
-        LengthOfAppNumber = Len(applicationNumber) - 1 'ÐÎ²ÎaaplicationNumberÊÇ13Î»µÄ×¨ÀûºÅ£¬×îºóÒ»Î»ÊÇ¼ìÑéÎ»£¬Ö»ÐèÒªÈ¡Ç°12Î»
+        LengthOfAppNumber = Len(applicationNumber) - 1 '形参aaplicationNumber是13位的专利号，最后一位是检验位，只需要取前12位
             
         ReDim ArrAppNo(1 To LengthOfAppNumber)
             
             For i = 1 To LengthOfAppNumber Step 1
             
                 ArrAppNo(i) = CInt(Mid(applicationNumber, i, 1))
-                sum = sum + ArrAppNo(i) * CheckBitSequence(i - 1)   'CheckBitSequenceÏÂ±ê´Ó0¿ªÊ¼£¬forÑ­»·µÄi´Ó1¿ªÊ¼£¬¹Ê£¨i-1)
+                sum = sum + ArrAppNo(i) * CheckBitSequence(i - 1)   'CheckBitSequence下标从0开始，for循环的i从1开始，故（i-1)
                 
             Next i
             
@@ -41,7 +40,7 @@ Function PatentAppNoCheckBit(applicationNumber)   '×¨ÀûÉêÇëºÅÐ£Ñé�
         
 End Function
 
-Function IDentityCheckbit(IDentityNumbers)          'ÖÐ¹ú¹«ÃñÉí·ÝÖ¤ºÅÐ£ÑéÎ»,18Î»
+Function IDentityCheckbit(IDentityNumbers)          '中国公民身份证号校验位,18位
 
     Dim LengthOfIDentityNumbers, TypeOfIDentityNumbers, remainder, i As Byte
     i = 1
@@ -53,20 +52,20 @@ Function IDentityCheckbit(IDentityNumbers)          'ÖÐ¹ú¹«ÃñÉí·ÝÖ�
     IDCardCheckBitResult = Array(1, 0, x, 9, 8, 7, 6, 5, 4, 3, 2)
     
         TypeOfIDentityNumbers = VarType(IDentityNumbers)
-        LengthOfIDentityNumbers = Len(IDentityNumbers) - 1 'ÐÎ²ÎIDentityNoÊÇ18Î»µÄÉí·ÝÖ¤ºÅ£¬×îºóÒ»Î»ÊÇ¼ìÑéÎ»£¬Ö»ÐèÒªÈ¡Ç°17Î»
+        LengthOfIDentityNumbers = Len(IDentityNumbers) - 1 '形参IDentityNo是18位的身份证号，最后一位是检验位，只需要取前17位
             
         ReDim ArrIDentityNumbers(1 To LengthOfIDentityNumbers)
             
             For i = 1 To LengthOfIDentityNumbers Step 1
             
                 ArrIDentityNumbers(i) = CInt(Mid(IDentityNumbers, i, 1))
-                sum = sum + ArrIDentityNumbers(i) * IDCardCheckBitSequence(i - 1)   'IDCardCheckBitSequenceÏÂ±ê´Ó0¿ªÊ¼£¬forÑ­»·µÄi´Ó1¿ªÊ¼£¬¹Ê£¨i-1)
+                sum = sum + ArrIDentityNumbers(i) * IDCardCheckBitSequence(i - 1)   'IDCardCheckBitSequence下标从0开始，for循环的i从1开始，故（i-1)
                 
             Next i
             
         remainder = sum Mod 11
         
-        IDentityCheckbit = IDCardCheckBitResult(remainder)
+        IDentityCheckbit = IDCardCheckBitResult(remainder)       '取模运算得到余数remainder，把remainder作为数组IDCardCheckBitResult的索引，即可得到身份证号的校验位数值
         
         If remainder = 2 Then
         
