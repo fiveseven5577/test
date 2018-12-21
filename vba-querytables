@@ -1,0 +1,625 @@
+Option Explicit
+Dim webtable3 As Object
+Dim webtable4 As QueryTable
+Dim connectString As String
+Dim tableRows, tableColumns As Byte
+Dim allOverSuccessRate, homeSuccessRate, awaySuccessRate
+Dim Sh, Sj, Sk As Single
+Dim sehf(), tableHeader
+Dim matchUpRng, WDLrng, GoalsRng, GoalsPercentRng As Range
+Dim arrSR(), arrWin(), arrDraw(), arrLose()
+Dim WDLpercent(3, 20) As Integer
+Dim wholeSheetTotalGoals, wholeSheetTotalRounds As Integer
+                                                            'totalGoals的意思是每场比赛的进球之和，一支球队的总进球和总失球就是一场比赛的进球之和，
+                                                            'totalGoals别忘了还要加上失球，因为统计的是一场比赛而不是一支球队的进球
+Dim multipleGM, goalsToBeScored             'in GoalsSheet
+Dim SRarray(), GoalsArray()
+Dim SRwithGoals(1, 20)
+Sub UrlQuery()
+Dim i, j As Integer
+    ThisWorkbook.Sheets(1).Cells.Clear
+    ThisWorkbook.Sheets(1).Activate
+    connectString = Application.InputBox("输入okooo网址，只能以http开头", Type:=2)
+    
+    Set webtable4 = ThisWorkbook.Sheets(1).QueryTables.Add(Connection:="url;" & connectString, _
+                    Destination:=ThisWorkbook.Sheets(1).Range("A1048576").End(xlUp))
+    With webtable4
+        .WebTables = "4"
+        .FieldNames = True
+        .WebSelectionType = xlSpecifiedTables
+        .WebFormatting = xlWebFormattingNone
+        .Refresh BackgroundQuery:=False
+        .ResultRange.Cells(1, 1).EntireRow.Delete
+        tableRows = .ResultRange.Rows.Count
+        tableColumns = .ResultRange.Columns.Count
+    End With
+    
+    '修改表头
+    tableHeader = Array("轮数", "总胜", "总平局", "总负", "总进球", "总失球", "总净胜", "主场", "主胜", "主平", "主负", _
+                        "主进球", "主失球", "客场", "客胜", "客平", "客负", "客进球", "客失球", "总积分", "SR", "Gyza")
+                        'GA就是GoalsInMatch里面的数组goalAverage()
+                        
+    For i = 0 To UBound(tableHeader) Step 1
+        webtable4.ResultRange.Cells(1, i + 3) = tableHeader(i)
+    Next i
+    
+End Sub
+Sub CalculateSR()
+Dim i, j As Integer
+Dim totalRoundsPerTeam As Byte
+ReDim allOverSuccessRate(1 To tableRows - 1)
+ReDim homeSuccessRate(1 To tableRows - 1)
+ReDim awaySuccessRate(1 To tableRows - 1)
+    
+    For i = 1 To tableRows - 1 Step 1
+        allOverSuccessRate(i) = (webtable4.ResultRange.Cells(i + 1, 4) + webtable4.ResultRange.Cells(i + 1, 5) * 0.5) / _
+                                 webtable4.ResultRange.Cells(i + 1, 3)
+        homeSuccessRate(i) = (webtable4.ResultRange.Cells(i + 1, 11) + webtable4.ResultRange.Cells(i + 1, 12) * 0.5) / _
+                              webtable4.ResultRange.Cells(i + 1, 10)
+        awaySuccessRate(i) = (webtable4.ResultRange.Cells(i + 1, 17) + webtable4.ResultRange.Cells(i + 1, 18) * 0.5) / _
+                              webtable4.ResultRange.Cells(i + 1, 16)
+        Sh = Sh + homeSuccessRate(i)     'Sh is a average of success rates that all teams in the competition can be expected to achieve in their home games
+        webtable4.ResultRange.Cells(i + 1, 23) = Left(allOverSuccessRate(i), 2)
+        webtable4.ResultRange.Cells(i + 1, 23).VerticalAlignment = xlCenter
+        webtable4.ResultRange.Cells(i + 1, 23).HorizontalAlignment = xlCenter
+        wholeSheetTotalGoals = wholeSheetTotalGoals + _
+                               webtable4.ResultRange.Cells(i + 1, 7) + webtable4.ResultRange.Cells(i + 1, 8)  '总进球+总失球，比赛的全部进球
+        wholeSheetTotalRounds = webtable4.ResultRange.Cells(i + 1, 3)
+        webtable4.ResultRange.Cells(i + 1, 24) = (webtable4.ResultRange.Cells(i + 1, 7) + webtable4.ResultRange.Cells(i + 1, 8)) _
+                                                / webtable4.ResultRange.Cells(i + 1, 3)   '一支球队在totalGoals场比赛中平均进了多少球，对应的参数是Gya和Gza
+
+    Next i
+    
+    Sh = Sh / (i - 1)
+    
+    For i = 1 To tableRows      '调整单元格格式
+        For j = 1 To tableColumns
+            webtable4.ResultRange.NumberFormat = "General"
+            webtable4.ResultRange.VerticalAlignment = xlCenter
+            webtable4.ResultRange.HorizontalAlignment = xlCenter
+        Next j
+    Next i
+    
+    For i = 1 To tableRows      '调整单元格格式
+        webtable4.ResultRange.Cells(i + 1, 24).NumberFormat = "0.00"
+    Next i
+    
+End Sub
+Sub CreateSRrng()       '生成SuccessRate的Range区域
+Dim i, j As Integer
+    
+    Set matchUpRng = ThisWorkbook.Sheets(1).Range("A1048576").End(xlUp).Offset(1, 0).Resize(tableRows, tableRows + 2)
+    ReDim sehf(1 To tableRows - 1, 1 To tableRows - 1) As Variant
+    
+    For i = 1 To tableRows - 1 Step 1
+        For j = 1 To tableRows - 1 Step 1
+            Sj = (50 * allOverSuccessRate(i)) / (100 - 100 * allOverSuccessRate(i)) * 100 * Sh / 50
+            Sk = ((50 * allOverSuccessRate(j)) / (100 - 100 * allOverSuccessRate(j)) * (100 - 100 * Sh)) / 50
+            sehf(i, j) = (Sj / (Sj + Sk)) * 100
+            With matchUpRng
+                .Cells(i + 1, 2) = webtable4.ResultRange.Cells(i + 1, 2) & "(" & "主" & ")"
+                .Cells(i + 1, j + 2) = sehf(i, j)
+                .EntireColumn.AutoFit
+                .NumberFormatLocal = "0.00"
+              If i = j Then
+                 .Cells(i + 1, j + 2).ClearContents
+                 .Cells(i + 1, j + 2).Interior.Color = RGB(134, 71, 63)
+              End If
+            End With
+        Next j
+        
+            Sj = 0
+            Sk = 0
+            With matchUpRng
+                .Cells(i + 1, 1) = i
+                .Cells(1, i + 2) = i
+                .NumberFormatLocal = "0.00"
+                .VerticalAlignment = xlCenter
+                .HorizontalAlignment = xlCenter
+            End With
+    Next i
+    
+        With matchUpRng
+            .Cells(1, 21).Interior.Color = RGB(225, 215, 0)
+            .Cells(1, 22).Interior.Color = RGB(225, 215, 0)
+            .Cells(1, 2) = "Sh=" & Left(Sh * 100, 2)
+            .Cells(1, 2).Font.Bold = True
+            .Cells(1, 1) = "SR"
+            .Cells(1, 1).Font.Bold = True
+            For i = 1 To tableRows + 1 Step 1
+                .Cells(1, i + 1).NumberFormat = "General"
+                .Cells(i + 1, 1).NumberFormat = "General"
+                .Cells(1, i).Interior.Color = RGB(225, 215, 0)
+            Next i
+        End With
+End Sub
+Sub CreateGoalsRng()        '建立ExpectGoals的单元格range区域
+Dim i, j As Integer
+        Set GoalsRng = ThisWorkbook.Sheets(1).Range("A1048576").End(xlUp).Offset(1, 0).Resize(tableRows + 2, tableRows + 2)
+            For i = 1 To tableRows - 1 Step 1
+                For j = 1 To tableRows - 1 Step 1
+                    With GoalsRng
+                        .Cells(i + 1, j + 2) = goalsToBeScored(i, j)  '不知ij的排列位置是否正确
+                        .Cells(i + 2, j + 2).NumberFormatLocal = "0.00"
+                        .Cells(i + 2, j + 2).VerticalAlignment = xlCenter
+                        .Cells(i + 2, j + 2).HorizontalAlignment = xlCenter
+                        If i = j Then
+                            .Cells(i + 1, j + 2).ClearContents
+                            .Cells(i + 1, j + 2).Interior.Color = RGB(134, 71, 63)
+                        End If
+                        
+                    End With
+                Next j
+                With GoalsRng
+                    .Cells(i + 1, 2) = webtable4.ResultRange.Cells(i + 1, 2)
+                    .VerticalAlignment = xlCenter
+                    .HorizontalAlignment = xlCenter
+                    .Cells(1, 2) = "ExpectGoals"
+                    .Cells(1, i).Interior.Color = RGB(225, 215, 0)      '黄色
+                    .Cells(1, i).NumberFormatLocal = "0"
+                    .Cells(i + 1, 1) = i
+                    .Cells(1, i + 2) = i
+                End With
+                
+            Next i
+            
+            GoalsRng.Cells(1, 1) = "GM"
+            GoalsRng.Cells(1, 1).EntireRow.NumberFormatLocal = "0"
+            GoalsRng.Cells(2, 1).EntireRow.NumberFormatLocal = "0.00"
+            GoalsRng.Cells(2, 1).NumberFormatLocal = "0"
+            
+End Sub
+Sub WinDrawLose()    'SuccessRate对应的胜平负概率
+Dim i, j As Integer
+
+    Set WDLrng = ThisWorkbook.Sheets(1).Range("A1048576").End(xlUp).Offset(1, 0).Resize(4, 22)
+
+    arrSR = Array(50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90)
+    arrWin = Array(35, 37, 39, 41, 44, 46, 48, 50, 52, 54, 57, 59, 61, 64, 66, 68, 71, 73, 75, 78, 80)
+    arrDraw = Array(30, 30, 30, 30, 29, 29, 29, 28, 28, 28, 27, 26, 26, 25, 24, 24, 23, 22, 21, 19, 18)
+    arrLose = Array(35, 33, 31, 29, 27, 25, 23, 22, 20, 18, 16, 15, 13, 11, 10, 8, 7, 5, 4, 3, 2)
+    
+    '以上四个数组用于给WDLpercent一行一行的赋值
+
+    For i = 0 To 20 Step 1
+        WDLpercent(0, i) = arrSR(i)
+    Next i
+    For i = 0 To 20 Step 1
+        WDLpercent(1, i) = arrWin(i)
+    Next i
+    For i = 0 To 20 Step 1
+        WDLpercent(2, i) = arrDraw(i)
+    Next i
+    For i = 0 To 20 Step 1
+        WDLpercent(3, i) = arrLose(i)
+    Next i
+
+        With WDLrng
+            For i = 0 To 3 Step 1
+                For j = 0 To 19 Step 1
+                        .Cells(i + 1, j + 3) = WDLpercent(i, j)
+                        .Cells(1, j + 3).Interior.Color = RGB(225, 215, 0)   '黄色RGB
+                Next j
+            Next i
+                        .Cells(1, 1) = "SC"
+                        .Cells(2, 1) = "win"
+                        .Cells(3, 1) = "Draw"
+                        .Cells(4, 1) = "lose"
+                        .Cells(1, 1).Interior.Color = RGB(225, 215, 0)
+                        .Cells(1, 2).Interior.Color = RGB(225, 215, 0)
+                        .VerticalAlignment = xlCenter
+                        .HorizontalAlignment = xlCenter
+        End With
+
+    Application.ScreenUpdating = True
+    
+End Sub
+Sub scores()          'http://www.okooo.com/soccer/   '足球中心 ->  赛事一览 ->  XX赛 201X ->  积分榜       目的是抓取某国联赛在一个赛季内每场比赛的比分
+
+Dim webtable3Rows, webtable3Columns As Integer
+Dim i, j, m As Integer
+Dim match As Object
+Dim gameTurnUrlReg, scoreReg, okoooQueryTable, connectMatches, gameScoreReg As Object
+Dim gameMonth, gameDay As Integer
+
+    ThisWorkbook.Sheets(1).Activate
+    ThisWorkbook.Sheets(1).Cells.Clear
+    connectString = Application.InputBox("Regular Express in URL", Type:=2) '输入okooo的网址，type=2表示只能输入字符串
+    
+    Set gameTurnUrlReg = CreateObject("vbscript.regexp")
+        With gameTurnUrlReg
+            .Pattern = "-\d{1,2}/"                  '，把“-1/”变成“-i/”以便利用for循环
+            .Global = True
+            .Execute (connectString)
+            If .test(connectString) Then
+                Set connectMatches = .Execute(connectString)
+                For Each match In connectMatches
+                    connectString = Replace(connectString, match, "")
+                Next
+            Else
+                MsgBox "网址错误，请重新输入！", vbAbortRetryIgnore
+                Exit Sub
+            End If
+            
+        End With
+        Call getSeasonInTitle
+        Call getGameRoundInSeason
+        For i = 1 To gameRounds Step 1
+            Set okoooQueryTable = ThisWorkbook.Sheets(1).QueryTables.Add(Connection:="url;" & connectString & "-" & i & "/", _
+            Destination:=Range("A1048576").End(xlUp).Offset(1, 0))
+                With okoooQueryTable
+                    .WebTables = "3"
+                    .FieldNames = True
+                    .WebSelectionType = xlSpecifiedTables
+                    .WebFormatting = xlWebFormattingNone
+                    .WebDisableDateRecognition = True
+                    .WebPreFormattedTextToColumns = False
+                    .PreserveFormatting = False
+                    .BackgroundQuery = False
+                    .Refresh
+                 End With
+                    Do
+                        DoEvents
+                    Loop While (okoooQueryTable.Refreshing)
+                    
+                    Set webtable3 = okoooQueryTable.ResultRange
+                    With webtable3
+                         webtable3Rows = .Rows.Count
+                         webtable3Columns = .Columns.Count
+                    End With
+                    Set webtable3 = webtable3.Resize(webtable3Rows, webtable3Columns + 8)
+                    
+            For j = 2 To webtable3Rows Step 1
+                gameMonth = Month(webtable3.Cells(j, 1))
+                gameDay = Day(webtable3.Cells(j, 1))
+                'gameTime = Time(webtable3.Cells(j, 1))
+                If beyondYear Then
+                    If gameMonth >= 7 And gameMonth <= 12 Then
+                        webtable3.Cells(j, 1) = DateSerial(previousYear, gameMonth, gameDay)
+                    Else
+                        webtable3.Cells(j, 1) = DateSerial(nextYear, gameMonth, gameDay)
+                    End If
+                Else
+                    webtable3.Cells(j, 1) = DateSerial(seasonYear, gameMonth, gameDay)
+                End If
+                
+            Next j
+            
+                Call MatchScoresReg(webtable3Rows, webtable3Columns)
+                
+                For j = 2 To webtable3Rows Step 1
+                    Call GenerateScore(j, webtable3Columns)
+                Next j
+                Application.StatusBar = GetProgress(i, gameRounds)
+                
+            If i > 1 Then
+                With webtable3
+                    .Rows(1).Delete
+                    .VerticalAlignment = xlCenter
+                    .HorizontalAlignment = xlCenter
+                End With
+            Else
+                With webtable3
+                    .Rows(1).NumberFormat = "0.00"
+                    .VerticalAlignment = xlCenter
+                    .HorizontalAlignment = xlCenter
+                    .Rows(1).Font.Bold = True
+                    .Cells(1, 7) = "百家欧赔"
+                    .Cells(1, 9) = "home"
+                    .Cells(1, 10) = "away"
+                    .Cells(1, 11) = "result"
+                    .Cells(1, 12) = "净胜"
+                    .Cells(1, 13) = "total"
+                    .Cells(1, 14) = "odds"
+                End With
+        
+            End If
+            
+            Set webtable3 = Nothing
+            Set okoooQueryTable = Nothing
+            
+        Next i
+End Sub
+Function GetProgress(curValue, maxValue)   '在状态栏利用黑方块或白方块表示进度
+    Dim blackSquare, whiteSquare As String
+    blackSquare = Application.Rept("■", curValue)
+    whiteSquare = Application.Rept("□", maxValue - curValue)
+    GetProgress = blackSquare & whiteSquare & FormatNumber(curValue / maxValue * 100, 2) & "%"
+End Function
+Sub MatchScoresReg(tableRows, tableColumns)     '利用正则表达式提取比分
+Dim homeScoreReg, awayScoreReg, homeScoreMatch, homeScoreMatches, awayScoreMatch, awayScoreMatches As Object
+Dim i, result, homescore, awayscore As Integer
+
+For i = 1 To tableRows - 1
+
+     Set homeScoreReg = CreateObject("vbscript.regexp")
+        With homeScoreReg
+            .Pattern = "\d{1,2}-"
+            .Global = True
+            Set homeScoreMatches = .Execute(webtable3.Cells(i + 1, 4))
+            For Each homeScoreMatch In homeScoreMatches
+                homeScoreMatch = Replace(homeScoreMatch, "-", "")
+                webtable3.Cells(i + 1, tableColumns) = homeScoreMatch
+            Next
+        End With
+        
+    Set awayScoreReg = CreateObject("vbscript.regexp")
+        With awayScoreReg
+            .Pattern = "-\d{1,2}"
+            .Global = True
+            Set awayScoreMatches = .Execute(webtable3.Cells(i + 1, 4))
+            For Each awayScoreMatch In awayScoreMatches
+                awayScoreMatch = Replace(awayScoreMatch, "-", "")
+                webtable3.Cells(i + 1, tableColumns + 1) = awayScoreMatch
+            Next
+        End With
+Next i
+End Sub
+Sub GenerateScore(tableRows, tableColumns)
+Dim result As Integer
+On Error Resume Next
+    If TypeName(webtable3.Cells(tableRows, 4).Value) = "string" Then   '主要针对有延期的比赛，比如英超和足总杯冲突
+        webtable3.Cells(tableRows, 9).ClearContents
+        Exit Sub
+    Else
+        result = webtable3.Cells(tableRows, tableColumns).Value _
+                - webtable3.Cells(tableRows, tableColumns + 1).Value
+    End If
+    
+    With webtable3
+        Select Case result
+            Case Is > 0
+                .Cells(tableRows, 11) = "主胜"
+                .Cells(tableRows, 6).Interior.Color = RGB(255, 255, 0)
+                .Cells(tableRows, 14) = .Cells(tableRows, 6)
+            Case Is = 0
+                .Cells(tableRows, 11) = "平局"
+                .Cells(tableRows, 7).Interior.Color = RGB(255, 255, 0)
+                .Cells(tableRows, 14) = .Cells(tableRows, 7)
+            Case Is < 0
+                .Cells(tableRows, 11) = "主负"
+                .Cells(tableRows, 8).Interior.Color = RGB(255, 255, 0)
+                .Cells(tableRows, 14) = .Cells(tableRows, 8)
+        End Select
+            .Cells(tableRows, tableColumns + 3) = Abs(result)
+            .Cells(tableRows, tableColumns + 4) = .Cells(tableRows, tableColumns) + _
+                                                  .Cells(tableRows, tableColumns + 1).Value
+    End With
+    
+End Sub
+Sub CreateWDLrngFromOdds()  '计算由赔率得出的胜平负概率，百家欧赔
+
+    With webtable3
+        .Cells(tableRows, 15) = 1 / .Cells(tableRows, 6)
+        .Cells(tableRows, 15).NumberFormatLocal = "0.00%"
+        .Cells(tableRows, 15).VerticalAlignment = xlCenter
+        .Cells(tableRows, 15).HorizontalAlignment = xlCenter
+        
+        .Cells(tableRows, 16) = 1 / .Cells(tableRows, 7)
+        .Cells(tableRows, 16).NumberFormatLocal = "0.00%"
+        .Cells(tableRows, 16).VerticalAlignment = xlCenter
+        .Cells(tableRows, 16).HorizontalAlignment = xlCenter
+        
+        .Cells(tableRows, 17) = 1 / .Cells(tableRows, 8)
+        .Cells(tableRows, 17).NumberFormatLocal = "0.00%"
+        .Cells(tableRows, 17).VerticalAlignment = xlCenter
+        .Cells(tableRows, 17).HorizontalAlignment = xlCenter
+
+    End With
+    
+End Sub
+Sub getSeasonInTitle()   '由HTML页面中的<title>判断赛季是否跨年，并计算出前一年和后一年分别是哪一年。
+    Dim seasonInTitle As String
+    Dim beyondYearReg, beyondYearMatches As Object
+        With CreateObject("internetExplorer.Application")
+            .Visible = False
+            .navigate connectString
+            Do Until .readyState = 4
+                DoEvents
+            Loop
+            seasonInTitle = .document.title
+        End With
+            Shell ("taskkill /f /im 360se.exe")
+        Set beyondYearReg = CreateObject("vbscript.regexp")
+            With beyondYearReg
+                .Pattern = "\d{2,}/\d{2,}"
+                .Global = True
+                If .test(seasonInTitle) Then
+                    Set beyondYearMatches = .Execute(seasonInTitle)
+                    beyondYear = True
+                    If Left(beyondYearMatches.Item(0).Value, 2) <= 50 Then
+                        previousYear = Left(beyondYearMatches.Item(0).Value, 2) + 2000
+                    Else
+                        previousYear = Left(beyondYearMatches.Item(0).Value, 2) + 1900
+                    End If
+                    
+                    If Right(beyondYearMatches.Item(0).Value, 2) <= 50 Then
+                        nextYear = Right(beyondYearMatches.Item(0).Value, 2) + 2000
+                    Else
+                        nextYear = Right(beyondYearMatches.Item(0).Value, 2) + 1900
+                    End If
+                    
+                Else
+                    .Pattern = "\d{4,}"
+                    Set beyondYearMatches = .Execute(seasonInTitle)
+                    beyondYear = False
+                    seasonYear = beyondYearMatches.Item(0).Value
+                End If
+            End With
+End Sub
+Sub getGameRoundInSeason()     '判断出一个赛季内总共有多少场比赛
+    Dim gameRoundMatches, gameRoundReg As Object
+        With CreateObject("internetExplorer.Application")
+            .Visible = False
+            .navigate connectString
+            Do Until .readyState = 4
+                DoEvents
+            Loop
+            gameRounds = .document.getElementsByTagName("table").Item(1).innerText
+            gameRounds = Right(Replace(gameRounds, " ", ""), 2)
+        End With
+            Shell ("taskkill /f /im 360se.exe")
+End Sub
+Sub SRwithGoalsInArray()
+
+Dim m As Byte
+
+    SRarray = Array(1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100)
+    GoalsArray = Array(3.25, 3.14, 3.03, 2.85, 2.74, 2.65, 2.59, 2.54, 2.5, 2.47, 2.5, 2.47, 2.5, 2.54, 2.59, 2.65, 2.74, 2.85, 3.03, 3.14, 3.25)
+    '书上提供的SR和平均进球率的关系,利用这两个一维数组给SRwithGoals赋值，使SRwithGoals形成二维数组
+
+    For m = 1 To 20 Step 1
+        SRwithGoals(0, m) = SRarray(m)
+    Next m
+    For m = 1 To 20 Step 1
+        SRwithGoals(1, m) = GoalsArray(m)
+    Next m
+    
+End Sub
+  Function SingleGM(SuccRate)
+'计算GM，GM是根据SR计算出来的预期进球数量
+    Dim m As Byte
+    Dim tempPortion As Single
+    Dim diffValue As Single
+    
+    For m = 1 To 19 Step 1
+    
+        If SuccRate > SRwithGoals(0, m) And SuccRate < SRwithGoals(0, m + 1) Then
+            'if的判断条件说明：SuccRate位于数组SRwithGoals（0，i)和SRwithGoals(0,i+1)之间时，读取SRwithGoals(1,i)的值
+            diffValue = Abs(SuccRate - SRwithGoals(0, m))
+            tempPortion = (Abs(SRwithGoals(1, m + 1) - SRwithGoals(1, m))) / 100
+
+                If SRwithGoals(1, m + 1) < SRwithGoals(1, m) Then
+                    SingleGM = GoalsArray(m) + tempPortion
+                Else
+                    SingleGM = GoalsArray(m) - tempPortion
+                End If
+        End If
+    Next m
+            
+End Function
+Sub CreateGoalsSheet()  'Average number of goals in team's games calculated according to SR：由SuccessRat算出某支球队的（期望）进球数
+                        '公式:GM*0.75+[GM*(Gya/Gye)*(Gza/Gze)*0.25]
+                        '这个过程中基本上都是webtable4的操作，除了SingleGM
+
+Dim oneQuarter, threeQuarter, Ge As Single
+Dim y, z As Byte
+Dim Gyza
+Dim goalsInMatchY, RoundsPerTeamY, goalsInMatchZ, RoundsPerTeamZ As Integer
+
+ReDim goalsToBeScored(1 To tableRows - 1, 1 To tableRows - 1)
+ReDim Gyza(1 To tableRows - 1)
+ReDim multipleGM(1 To tableRows - 1, 1 To tableRows - 1)
+
+wholeSheetTotalRounds = wholeSheetTotalRounds * (tableRows - 1)
+Ge = wholeSheetTotalGoals / wholeSheetTotalRounds   '包括公式中的Gye和Gze
+
+For y = 1 To tableRows - 1 Step 1
+    For z = 1 To tableRows - 1 Step 1
+        multipleGM(y, z) = SingleGM(sehf(y, z))
+    Next z
+Next y
+
+For y = 1 To tableRows - 1 Step 1
+    For z = 1 To tableRows - 1 Step 1
+        RoundsPerTeamY = webtable4.ResultRange.Cells(y + 1, 3)
+        goalsInMatchY = webtable4.ResultRange.Cells(y + 1, 7) + webtable4.ResultRange.Cells(y + 1, 8)   '书中公式的Gya
+        Gyza(y) = goalsInMatchY / RoundsPerTeamY
+    
+        RoundsPerTeamZ = webtable4.ResultRange.Cells(z + 1, 3)
+        goalsInMatchZ = webtable4.ResultRange.Cells(z + 1, 7) + webtable4.ResultRange.Cells(z + 1, 8)   '书中公式的Gza
+        Gyza(z) = goalsInMatchZ / RoundsPerTeamZ
+        
+        threeQuarter = multipleGM(y, z) * 0.75
+        oneQuarter = multipleGM(y, z) * (Gyza(y) / Ge) * (Gyza(z) / Ge) * 0.25
+        goalsToBeScored(y, z) = threeQuarter + oneQuarter
+        
+    Next z
+Next y
+
+End Sub
+Sub CreateGoalsPercentRng()
+Dim i, j As Byte
+Dim averageGoalsByGM(), zero(), zeroOne(), zeroTwo(), zeroThree(), zeroFour(), zeroFive()
+Dim zeroGoal(), oneGoal(), twoGoals(), threeGoals(), fourGoals(), fiveGoals(), fiveGoalsPluse()
+Dim GoalsPercentDistribution(6, 22) As Single
+
+averageGoalsByGM = Array(1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3#, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7)
+zero = Array(23.3, 21.1, 19.1, 17.3, 15.7, 14.2, 12.9, 11.6, 10.5, 9.5, 8.6, 7.8, 7.1, 6.4, 5.8, 5.2, 4.7, 4.3, 3.9, 3.5, 3.2, 2.9, 2.6)
+zeroOne = Array(55.3, 52.1, 49#, 46#, 43.1, 40.4, 37.8, 35.3, 33#, 30.7, 28.6, 26.7, 24.8, 23#, 21.4, 19.9, 18.4, 17.1, 15.8, 14.6, 13.6, 12.5, 11.6)
+zeroTwo = Array(80.7, 78.2, 75.6, 73#, 70.3, 67.7, 65#, 62.3, 59.7, 57#, 54.5, 52#, 49.5, 47.1, 44.7, 42.5, 40.3, 38.1, 36.1, 34.1, 32.2, 30.4, 28.7)
+zeroThree = Array(93.2, 91.9, 90.4, 88.9, 87.2, 85.5, 83.6, 81.7, 79.7, 77.7, 75.6, 73.4, 71.2, 69#, 66.8, 64.6, 62.4, 60.1, 57.9, 55.7, 53.6, 51.4, 49.3)
+zeroFour = Array(98.1, 97.5, 96.9, 96.3, 95.5, 94.6, 93.7, 92.7, 91.5, 90.3, 89#, 87.7, 86.2, 84.7, 83.1, 81.5, 79.8, 78#, 76.2, 74.4, 72.5, 70.6, 68.7)
+zeroFive = Array(99.5, 99.4, 99.2, 98.9, 98.6, 98.3, 97.9, 97.4, 96.9, 96.4, 95.7, 95#, 94.3, 93.4, 92.5, 91.5, 90.5, 89.4, 88.2, 87#, 85.7, 84.3, 82.9)
+
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(0, i) = averageGoalsByGM(i)
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(1, i) = zero(i)
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(2, i) = zeroOne(i) * 0.01
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(3, i) = zeroTwo(i) * 0.01
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(4, i) = zeroThree(i) * 0.01
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(4, i) = zeroThree(i) * 0.01
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(5, i) = zeroFour(i) * 0.01
+    Next i
+    
+    For i = 0 To 22 Step 1
+        GoalsPercentDistribution(6, i) = zeroFive(i) * 0.01
+    Next i
+    
+    Set GoalsPercentRng = ThisWorkbook.Sheets(1).Range("A1048576").End(xlUp).Offset(1, 0).Resize _
+                          (UBound(GoalsPercentDistribution, 1), UBound(GoalsPercentDistribution, 2))
+                          
+    With GoalsPercentRng
+    
+        For i = 1 To UBound(GoalsPercentDistribution, 1) Step 1
+                For j = 1 To UBound(GoalsPercentDistribution, 2) Step 1
+                        .Cells(i + 1, j + 2) = GoalsPercentDistribution(i, j)
+                        .Cells(i + 2, j + 2).NumberFormatLocal = "00.00%"
+                        .Cells(i + 2, j + 2).VerticalAlignment = xlCenter
+                        .Cells(i + 2, j + 2).HorizontalAlignment = xlCenter
+                        '.Cells(i + 2, j + 2).Range.AutoFit
+                Next j
+                .Cells(i + 1, j + 2).EntireRow.AutoFit
+        Next i
+        
+        For i = 1 To UBound(GoalsPercentDistribution, 2) Step 1
+            .Cells(2, i + 2).NumberFormatLocal = "0.00"
+            .Cells(2, i + 2).VerticalAlignment = xlCenter
+            .Cells(2, i + 2).HorizontalAlignment = xlCenter
+            .Cells(2, i + 2).EntireRow.AutoFit
+        Next i
+        
+    End With
+End Sub
+Sub callModule()
+
+    Call UrlQuery
+    Call CalculateSR
+    Call CreateSRrng
+    Call SRwithGoalsInArray
+    Call WinDrawLose
+    Call CreateGoalsSheet
+    Call CreateGoalsRng
+    Call CreateGoalsPercentRng
+    'Call scores
+    
+End Sub
+
