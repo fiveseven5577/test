@@ -1,0 +1,18 @@
+
+Public dateTypeCheck As Boolean
+
+Sub isDateType(applicationDate)
+
+'Check whether the type of value in cells is datatype or not
+
+    dateTypeCheck = False
+
+    If IsDate(applicationDate) Then
+
+        dateTypeCheck = True
+        
+    Else: dateTypeCheck = False
+        
+    End If
+
+End Sub
