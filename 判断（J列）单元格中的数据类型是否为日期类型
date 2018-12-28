@@ -1,0 +1,15 @@
+Sub isDateType(applicationDate)
+
+'判断（J列）单元格中的数据类型是否为日期类型
+
+    dateTypeCheck = False   '默认dateTypeCheck=false,防止误判
+
+    If IsDate(applicationDate) Then
+
+        dateTypeCheck = True
+        
+    Else: dateTypeCheck = False
+    
+    End If
+
+End Sub
