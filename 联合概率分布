@@ -1,0 +1,48 @@
+
+#一袋中有5个白球，1个红球和2个黑球。每次摸1球，不放回抽样3次。
+#设3次中有X次摸到白球，Y次摸到红球，求（X，Y）的联合概率分布律。
+
+global_ballsDistrabution<-data.frame(       #建立数据框，存储不放回抽样的全部样本
+  colour1=c(NULL),
+  colour2=c(NULL),
+  colour3=c(NULL)
+
+)
+
+
+global_colourBalls<-NULL
+
+threeBalls<-function (){
+
+  colourBalls<-c("white","white","white","white","white","red","black","black")
+  global_colourBalls<-colourBalls
+
+  ballsDistrabution<-data.frame(       #建立数据框，存储不放回抽样的全部样本
+    colour1=c(NULL),
+    colour2=c(NULL),
+    colour3=c(NULL)
+
+  )
+
+  whiteRed=0  #不放回抽样，摸到红球白球的初始值为零
+
+  for(i in c(1:10000)){                #不放回抽样10000次
+
+    temp1<-sample(colourBalls,3)       #把第i次不放回抽样的结果暂时存入变量temp1中
+    ballsDistrabution[i,1]<-temp1[1]    #将第i次不放回抽样的结果存入ballsDistrabution中
+    ballsDistrabution[i,2]<-temp1[2]
+    ballsDistrabution[i,3]<-temp1[3]
+
+    temp2<-c("white","red")            #X次摸到白球，Y次摸到红球
+
+        #判断第i次的3次不放回抽样的结果中是否符合要求：摸到白球和红球（没摸到黑球）
+    if( ballsDistrabution[i, ] %in% temp2){          
+      whiteRed=whiteRed+1
+    }
+  }
+
+    assign("global_ballsDistrabution", ballsDistrabution, envir = .GlobalEnv)
+    result=whiteRed/10000
+    print(result)
+
+}
