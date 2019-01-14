@@ -5,12 +5,12 @@ Dim appFileDateColumnBottom As Range
 
 Sub CheckFileDate()
 
-Set fileDateRng = Worksheets("×¨Àû").Range("J:J")
+Set fileDateRng = Worksheets("专利").Range("J:J")
 
 Dim i, rowBottomCount As Integer
 Dim tempCellsValue As Variant
     
-    rowBottomCount = Worksheets("×¨Àû").Cells(1048576, 10).End(xlUp).Row
+    rowBottomCount = Worksheets("专利").Cells(1048576, 10).End(xlUp).Row
         
 For i = 3 To rowBottomCount Step 1
 
@@ -82,7 +82,7 @@ Dim farRightAppNo As Variant
 Dim appNoColumnRowCount As Integer
 
 
-appNoColumnRowCount = Worksheets("×¨Àû").Range("K1048576").End(xlUp).Offset(1, 0).Row
+appNoColumnRowCount = Worksheets("专利").Range("K1048576").End(xlUp).Offset(1, 0).Row
 
 For i = 3 To appNoColumnRowCount Step 1
 
@@ -116,4 +116,47 @@ Next i
 
 Application.ScreenUpdating = True
 
+End Sub
+
+Sub SelectionCheckit()      '检测选择区域的专利申请号校验位
+
+On Error Resume Next
+
+Dim rngSelection As Range
+Dim selectionAddress As String
+
+selectionAddresses = Selection.Address
+
+Set rngSelection = ActiveSheet.Range(selectionAddresses)
+
+    For Each cell In rngSelection
+    
+        tempValueInCell = cell.Value
+        tempValueInCell = Replace(Replace(tempValueInCell, " ", ""), ".", "")
+        checkBitValue = PatentAppNoCheckBit(tempValueInCell)
+        
+        farRightAppNo = Right(tempValueInCell, 1)
+    
+        If farRightAppNo = "X" Then
+    
+            If checkBitValue < 10 Then
+        
+                cell.Interior.Color = RGB(192, 192, 192)
+        
+            End If
+        
+        Else
+    
+            farRightAppNo = CInt(farRightAppNo)
+        
+            If Not (farRightAppNo = checkBitValue) Then
+        
+                cell.Interior.Color = RGB(192, 192, 192)
+            
+            End If
+    
+        End If
+        
+    Next cell
+    
 End Sub
