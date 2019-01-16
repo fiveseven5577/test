@@ -1,0 +1,34 @@
+Function IDentityCheckbit(IDentityNumbers)          '中国公民身份证号检验
+
+    Dim LengthOfIDentityNumbers, TypeOfIDentityNumbers, remainder, i As Byte
+    i = 1
+    Dim ArrIDentityNumbers()
+    Dim sum  As Integer
+    sum = 0
+    
+    IDCardCheckBitSequence = Array(7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2)
+    IDCardCheckBitResult = Array(1, 0, x, 9, 8, 7, 6, 5, 4, 3, 2)
+    
+        TypeOfIDentityNumbers = VarType(IDentityNumbers)
+        LengthOfIDentityNumbers = Len(IDentityNumbers) - 1 'ÐÎ²ÎIDentityNoÊÇ18Î»µÄÉí·ÝÖ¤ºÅ£¬×îºóÒ»Î»ÊÇ¼ìÑéÎ»£¬Ö»ÐèÒªÈ¡Ç°17Î»
+            
+        ReDim ArrIDentityNumbers(1 To LengthOfIDentityNumbers)
+            
+            For i = 1 To LengthOfIDentityNumbers Step 1
+            
+                ArrIDentityNumbers(i) = CInt(Mid(IDentityNumbers, i, 1))
+                sum = sum + ArrIDentityNumbers(i) * IDCardCheckBitSequence(i - 1)   'IDCardCheckBitSequenceÏÂ±ê´Ó0¿ªÊ¼£¬forÑ­»·µÄi´Ó1¿ªÊ¼£¬¹Ê£¨i-1)
+                
+            Next i
+            
+        remainder = sum Mod 11
+        
+        IDentityCheckbit = IDCardCheckBitResult(remainder)       'È¡Ä£ÔËËãµÃµ½ÓàÊýremainder£¬°Ñremainder×÷ÎªÊý×éIDCardCheckBitResultµÄË÷Òý£¬¼´¿ÉµÃµ½Éí·ÝÖ¤ºÅµÄÐ£ÑéÎ»ÊýÖµ
+        
+        If remainder = 2 Then
+        
+            IDentityCheckbit = "X"
+        
+        End If
+ 
+End Function
