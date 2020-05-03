@@ -1,0 +1,31 @@
+
+
+test111<-function(classSize,testTimes){
+  
+  dayArray_1983 <- seq.Date(from =as.Date("1983/01/01",format = "%Y/%m/%d"), by = "day", length.out = 365)
+  singleClass<-sample(dayArray_1983,40,replace = TRUE)
+  compareArray<-table(singleClass)
+  abcdef<-factor(compareArray)
+  print(abcdef)
+  
+}
+
+
+for (n in n:testTimes){
+  
+  classMates<- 
+  
+  isDuplicatedArray<- duplicated(classMates)
+  
+  if(TRUE %in% isDuplicatedArray){
+    
+    sameBirthday=sameBirthday+1
+    
+  }
+  
+}
+
+print(sameBirthday)
+ratioValue<-(sameBirthday/testTimes)
+print(ratioValue)
+
