@@ -1,0 +1,27 @@
+birthDay<-ts(1:365,start=1983,frequency = 1)
+#classMates<-sample(birthDay,30,replace = TRUE)
+dayArray_1983 <- seq.Date(from =as.Date("1983/01/01",format = "%Y/%m/%d"), by = "day", length.out = 365)
+
+sameBirthday=0
+
+testTimes=50000
+
+for (n in 1:testTimes){
+  
+  classMates<-sample(birthDay,30,replace = TRUE)
+  
+  isDuplicatedArray<- duplicated(classMates)
+
+  if(TRUE %in% isDuplicatedArray){
+  
+    sameBirthday=sameBirthday+1
+    
+  }
+  
+}
+
+print(sameBirthday)
+ratioValue<-(sameBirthday/testTimes)
+print(ratioValue)
+
+
