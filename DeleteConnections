@@ -1,0 +1,23 @@
+Sub DeleteConnections()
+Dim actCon As Object
+For Each actCon In ActiveWorkbook.Connections
+    actCon.Delete
+Next
+End Sub
+
+Sub setQuerytableNothing()
+    Dim queryTableCounts As Integer
+    Dim singleConnection As Object
+    
+    ThisWorkbook.Sheets(1).Activate
+    
+    For Each singleConnection In ActiveWorkbook.Connections
+         Set singleConnection = Nothing
+         singleConnection.Delete
+    Next
+    
+    queryTableCounts = ThisWorkbook.Sheets(1).Connections.Count
+    
+    MsgBox "There are " & queryTableCounts & " querytalbes in this sheet"
+        
+End Sub
